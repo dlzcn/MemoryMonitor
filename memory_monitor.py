@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 2
-#   last modified: 2019-12-12 13:07:37
+#        revision: 3
+#   last modified: 2019-12-12 13:42:37
 # *****************************************************
 
 import os
@@ -84,7 +84,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         self.mpl_ax.set_title('Memory Usage Monitor',
                               color='w', fontdict={'fontsize': 10})
         self.mpl_ax.set_xlabel('Sampling points', color='w')
-        self.mpl_ax.set_ylabel('VMS (MB)', color='w')
+        self.mpl_ax.set_ylabel('Usage (MB)', color='w')
         self.mpl_ax.tick_params(axis='both', color='w')
         self.mpl_ax.tick_params(colors='w', labelsize=8)
         # dark background
@@ -203,7 +203,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
                 if proc.info['name'] == p_name:
                     self.pid = proc.info['pid']
                     self.ct = datetime.datetime.fromtimestamp(
-                        proc.create_time()).strftime("%Y-%m-%d %H:%M:%S")
+                        proc.create_time()).strftime('%Y-%m-%d %H:%M:%S')
                     self.mpl_ax.set_title('Memory Usage Monitor ({} - {})'.format(p_name, self.ct),
                                           color='w', fontdict={'fontsize': 10})
                     logging.info('New process [{}]-[{}] is Dead'.format(self.pid, self.ct))
@@ -217,7 +217,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
             memory_usage = process.memory_info()._asdict()
             logging.info('[{}]-[{}]-[{}] - [{}, {}]'.format(
                 self.pid, p_name, self.ct, memory_usage['rss'], memory_usage['vms']))
-            ts = datetime.datetime.now().isoformat()
+            ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.dq.appendleft((ts, memory_usage['rss'], memory_usage['vms']))
             x = np.arange(0, len(self.dq))
 
@@ -231,6 +231,17 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
 
             self.mpl_ax.set_ylim(0, np.max(vms) * 1.1)
             self.mpl_ax.set_xlim(0, max(len(x) * 1.2, self.dq.maxlen // 4))
+
+            ts = [x[0] for x in self.dq]
+            labels = []
+            for pos in self.mpl_ax.get_xticks():
+                pos = int(pos)
+                if pos < len(ts):
+                    labels.append(ts[pos][5:])
+                else:
+                    labels.append('')
+            self.mpl_ax.set_xticklabels(labels, rotation=45)
+
             self.mpl_ax.figure.canvas.draw()
 
 
