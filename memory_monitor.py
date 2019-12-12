@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 1
-#   last modified: 2019-12-12 09:07:03
+#        revision: 2
+#   last modified: 2019-12-12 13:07:37
 # *****************************************************
 
 import os
@@ -27,7 +27,7 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 __version__ = '1.0.1'
-__revision__ = 1
+__revision__ = 2
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -144,13 +144,23 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
     def onStart(self):
         self.stop_btn.setEnabled(True)
         self.start_btn.setEnabled(False)
+        interval = self.settings.value('interval', 10, type=int)
+        p_name = self.settings.value('process_name', '', type=str)
+        logging.debug(
+            'Start monitor: [interval: {}, process name {}]'.format(interval, p_name)
+        )
         # start timer
         self.dq.clear()
-        self.timer.start(self.settings.value('interval', 10, type=int) * 1000)
+        self.pid = None
+        self.ct = ''
+        self.timer.start(interval * 1000)
 
     def onStop(self):
         self.stop_btn.setEnabled(False)
         self.start_btn.setEnabled(True)
+        logging.debug(
+            'Stop monitor: [pid: {}, create time: {}]'.format(self.pid, self.ct)
+        )
         # stop timer
         self.timer.stop()
 
@@ -205,14 +215,22 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         if self.pid is not None:
             process = psutil.Process(self.pid)
             memory_usage = process.memory_info()._asdict()
-            logging.info('[{}]-[{}]-[{}] - [{}]'.format(self.pid, p_name, self.ct, memory_usage['vms']))
+            logging.info('[{}]-[{}]-[{}] - [{}, {}]'.format(
+                self.pid, p_name, self.ct, memory_usage['rss'], memory_usage['vms']))
             ts = datetime.datetime.now().isoformat()
-            self.dq.appendleft((ts, memory_usage['vms']))
-            dat = np.array([x[1] / 1024 / 1204 for x in self.dq])
-            self.line.set_xdata(np.arange(0, len(dat)))
-            self.line.set_ydata(dat)
-            self.mpl_ax.set_ylim(0, np.max(dat) * 1.1)
-            self.mpl_ax.set_xlim(0, min(len(dat) * 1.2, self.dq.maxlen // 4))
+            self.dq.appendleft((ts, memory_usage['rss'], memory_usage['vms']))
+            x = np.arange(0, len(self.dq))
+
+            self.line_rss.set_xdata(x)
+            rss = np.array([x[1] / 1024 / 1204 for x in self.dq])
+            self.line_rss.set_ydata(rss)
+
+            self.line_vms.set_xdata(x)
+            vms = np.array([x[2] / 1024 / 1204 for x in self.dq])
+            self.line_vms.set_ydata(vms)
+
+            self.mpl_ax.set_ylim(0, np.max(vms) * 1.1)
+            self.mpl_ax.set_xlim(0, max(len(x) * 1.2, self.dq.maxlen // 4))
             self.mpl_ax.figure.canvas.draw()
 
 
