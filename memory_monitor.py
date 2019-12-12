@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 3
-#   last modified: 2019-12-12 13:42:37
+#        revision: 4
+#   last modified: 2019-12-12 13:50:34
 # *****************************************************
 
 import os
@@ -26,8 +26,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-__version__ = '1.0.1'
-__revision__ = 2
+__version__ = '1.0.2'
+__revision__ = 4
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -83,7 +83,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         # white text, ticks
         self.mpl_ax.set_title('Memory Usage Monitor',
                               color='w', fontdict={'fontsize': 10})
-        self.mpl_ax.set_xlabel('Sampling points', color='w')
+        # self.mpl_ax.set_xlabel('Sampling points', color='w')
         self.mpl_ax.set_ylabel('Usage (MB)', color='w')
         self.mpl_ax.tick_params(axis='both', color='w')
         self.mpl_ax.tick_params(colors='w', labelsize=8)
