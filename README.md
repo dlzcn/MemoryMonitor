@@ -7,3 +7,6 @@ on the main windows, sampled points are also recorded in log.
 
 Matplotlib is used to diplay the chart. Python logging module is used to
 record sampled points.
+
+# Screenshots
+![Memory Usage Monitor](screenshot/MemoryUsageMonitor_1.0.1.2.png)
