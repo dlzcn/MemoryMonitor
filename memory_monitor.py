@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 5
-#   last modified: 2019-12-12 14:15:20
+#        revision: 6
+#   last modified: 2019-12-12 14:56:58
 # *****************************************************
 
 import os
@@ -26,8 +26,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-__version__ = '1.0.3'
-__revision__ = 5
+__version__ = '1.0.5'
+__revision__ = 6
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -107,6 +107,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         interval = QtWidgets.QLineEdit()
         interval.setValidator(QtGui.QIntValidator(0, 1000000000))
         interval.setObjectName('interval')
+        interval.setAlignment(QtCore.Qt.AlignCenter)
         interval.setText(self.settings.value('interval', '10', type=str))
         interval.textEdited[str].connect(self.updateSettings)
         layout.addWidget(label1)
@@ -115,6 +116,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         label2 = QtWidgets.QLabel('Process name')
         p_name = QtWidgets.QLineEdit()
         p_name.setObjectName('process_name')
+        p_name.setAlignment(QtCore.Qt.AlignCenter)
         p_name.setText(self.settings.value('process_name', '', type=str))
         p_name.textEdited[str].connect(self.updateSettings)
         layout.addWidget(label2)
@@ -124,6 +126,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         dq_maxlen = QtWidgets.QLineEdit()
         dq_maxlen.setValidator(QtGui.QIntValidator(0, 9999))
         dq_maxlen.setObjectName('dq_maxlen')
+        dq_maxlen.setAlignment(QtCore.Qt.AlignCenter)
         dq_maxlen.setToolTip('Maximal queue size to store the data point, change will be applied after restart')
         dq_maxlen.setText(self.settings.value('dq_maxlen', '120', type=str))
         dq_maxlen.textEdited[str].connect(self.updateSettings)
@@ -214,11 +217,11 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         self._update_process_id(p_name)
         if self.pid is not None:
             process = psutil.Process(self.pid)
-            memory_usage = process.memory_info()._asdict()
+            memory_usage = process.memory_info()
             logging.info('[{}]-[{}]-[{}] - [{}, {}]'.format(
-                self.pid, p_name, self.ct, memory_usage['rss'], memory_usage['vms']))
+                self.pid, p_name, self.ct, memory_usage.rss, memory_usage.vms))
             ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self.dq.appendleft((ts, memory_usage['rss'], memory_usage['vms']))
+            self.dq.appendleft((ts, memory_usage.rss, memory_usage.vms))
             x = np.arange(0, len(self.dq))
 
             self.line_rss.set_xdata(x)
@@ -230,7 +233,10 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
             self.line_vms.set_ydata(vms)
 
             self.mpl_ax.set_ylim(0, max(np.max(vms), np.max(rss)) * 1.1)
-            self.mpl_ax.set_xlim(0, max(len(x) * 1.2, self.dq.maxlen // 4))
+            self.mpl_ax.set_xlim(
+                0,
+                min(max(len(x) * 1.2, self.dq.maxlen // 4), self.dq.maxlen)
+            )
 
             ts = [x[0] for x in self.dq]
             labels = []
@@ -240,7 +246,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
                     labels.append(ts[pos][5:])
                 else:
                     labels.append('')
-            self.mpl_ax.set_xticklabels(labels, rotation=45)
+            self.mpl_ax.set_xticklabels(labels)
 
             self.mpl_ax.figure.canvas.draw()
 
