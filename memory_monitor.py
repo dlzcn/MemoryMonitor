@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 6
-#   last modified: 2019-12-12 14:56:58
+#        revision: 7
+#   last modified: 2019-12-13 10:29:47
 # *****************************************************
 
 import os
@@ -26,8 +26,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-__version__ = '1.0.5'
-__revision__ = 6
+__version__ = '1.0.6'
+__revision__ = 7
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -209,7 +209,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
                         proc.create_time()).strftime('%Y-%m-%d %H:%M:%S')
                     self.mpl_ax.set_title('Memory Usage Monitor ({} - {})'.format(p_name, self.ct),
                                           color='w', fontdict={'fontsize': 10})
-                    logging.info('New process [{}]-[{}] is Dead'.format(self.pid, self.ct))
+                    logging.info('New process [{}]-[{}] found'.format(self.pid, self.ct))
                     break
 
     def onTimer(self):
