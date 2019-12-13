@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 7
-#   last modified: 2019-12-13 10:29:47
+#        revision: 8
+#   last modified: 2019-12-13 15:12:53
 # *****************************************************
 
 import os
@@ -26,8 +26,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-__version__ = '1.0.6'
-__revision__ = 7
+__version__ = '1.1.0'
+__revision__ = 8
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -43,6 +43,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.onTimer)
         self.init_ui()
+        self.setup_shortcuts()
 
     def init_ui(self):
         self.setMinimumSize(800, 600)
@@ -58,23 +59,24 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         size_policy.setHeightForWidth(widget.sizePolicy().hasHeightForWidth())
         widget.setSizePolicy(size_policy)
         # create widgets ... # the first row
-        ctrl_layout = self.createMainCtrls()
+        ctrl_layout = self._createMainCtrls()
         # create matplotlib widgets and components
-        canvas = self.setupMplWidget()
+        canvas = self._setupMplWidget()
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(canvas)
         main_layout.addLayout(ctrl_layout)
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
+        self.statusBar().showMessage('Launched ...', 1000)
 
-    def setupMplWidget(self):
+    def _setupMplWidget(self):
         canvas = FigureCanvas(Figure(figsize=(5, 3)))
         self.mpl_ax = canvas.figure.subplots()
         canvas.figure.set_tight_layout(True)
         self.addToolBar(
             QtCore.Qt.TopToolBarArea,
             NavigationToolbar(self.mpl_ax.figure.canvas, self)
-            )
+        )
         # the frame
         self.mpl_ax.spines['bottom'].set_color('w')
         self.mpl_ax.spines['top'].set_color('w')
@@ -100,7 +102,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
 
         return canvas
 
-    def createMainCtrls(self):
+    def _createMainCtrls(self):
         layout = QtWidgets.QHBoxLayout()
 
         label1 = QtWidgets.QLabel('Interval (second)')
@@ -108,6 +110,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         interval.setValidator(QtGui.QIntValidator(0, 1000000000))
         interval.setObjectName('interval')
         interval.setAlignment(QtCore.Qt.AlignCenter)
+        interval.setToolTip('Data sampling interval')
         interval.setText(self.settings.value('interval', '10', type=str))
         interval.textEdited[str].connect(self.updateSettings)
         layout.addWidget(label1)
@@ -117,18 +120,21 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         p_name = QtWidgets.QLineEdit()
         p_name.setObjectName('process_name')
         p_name.setAlignment(QtCore.Qt.AlignCenter)
+        p_name.setToolTip('Name of the process including the extension.'
+                          ' It is case sensitive and duplicated name not well supported!')
         p_name.setText(self.settings.value('process_name', '', type=str))
         p_name.textEdited[str].connect(self.updateSettings)
         layout.addWidget(label2)
         layout.addWidget(p_name)
 
-        label3 = QtWidgets.QLabel('Buffered points*')
+        label3 = QtWidgets.QLabel('Buffered data length*')
         dq_maxlen = QtWidgets.QLineEdit()
         dq_maxlen.setValidator(QtGui.QIntValidator(0, 9999))
         dq_maxlen.setObjectName('dq_maxlen')
         dq_maxlen.setAlignment(QtCore.Qt.AlignCenter)
-        dq_maxlen.setToolTip('Maximal queue size to store the data point, change will be applied after restart')
+        dq_maxlen.setToolTip('Maximal length of the buffered data points, press entry to apply the change on the fly!')
         dq_maxlen.setText(self.settings.value('dq_maxlen', '120', type=str))
+        dq_maxlen.editingFinished.connect(self.onBufferSizedChanged)
         dq_maxlen.textEdited[str].connect(self.updateSettings)
         layout.addWidget(label3)
         layout.addWidget(dq_maxlen)
@@ -144,14 +150,45 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         layout.addWidget(self.stop_btn)
         return layout
 
+    def setup_shortcuts(self):
+        shortcut_t = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_T), self)
+        shortcut_t.activated.connect(self.toggleWindowOnTop)
+        shortcut_s = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_S), self)
+        shortcut_s.activated.connect(self.toggleStartStop)
+
+    def onBufferSizedChanged(self):
+        try:
+            val = self.settings.value('dq_maxlen', 120, type=int)
+            self.dq = collections.deque(reversed(self.dq), maxlen=val)
+            self.dq.reverse()
+            msg = 'New buffer max length is {}, current size is {}'.format(val, len(self.dq))
+            self.statusBar().showMessage(msg, 1000)
+        except Exception as e:
+            self.statusBar().showMessage(repr(e), 1000)
+
+    def toggleWindowOnTop(self):
+        self.setWindowFlags(self.windowFlags() ^ QtCore.Qt.WindowStaysOnTopHint)
+        self.show()
+        if self.windowFlags() & QtCore.Qt.WindowStaysOnTopHint:
+            msg = 'Stays On Top: ON'
+        else:
+            msg = 'Stays On Top: OFF'
+        self.statusBar().showMessage(msg, 1000)
+
+    def toggleStartStop(self):
+        if self.timer.isActive():
+            self.onStop()
+        else:
+            self.onStart()
+
     def onStart(self):
         self.stop_btn.setEnabled(True)
         self.start_btn.setEnabled(False)
         interval = self.settings.value('interval', 10, type=int)
         p_name = self.settings.value('process_name', '', type=str)
-        logging.debug(
-            'Start monitor: [interval: {}, process name {}]'.format(interval, p_name)
-        )
+        msg = 'Start monitor: [interval: {}, process name {}]'.format(interval, p_name)
+        logging.debug(msg)
+        self.statusBar().showMessage(msg, 1000)
         # start timer
         self.dq.clear()
         self.pid = None
@@ -161,9 +198,9 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
     def onStop(self):
         self.stop_btn.setEnabled(False)
         self.start_btn.setEnabled(True)
-        logging.debug(
-            'Stop monitor: [pid: {}, create time: {}]'.format(self.pid, self.ct)
-        )
+        msg = 'Stop monitor: [pid: {}, create time: {}]'.format(self.pid, self.ct)
+        logging.debug(msg)
+        self.statusBar().showMessage(msg, 1000)
         # stop timer
         self.timer.stop()
 
@@ -191,14 +228,15 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
                 if p.name() != p_name:
                     self.pid = None
                     self.ct = ''
-            except Exception as e:
-                logging.info('Process [{}]-[{}] is Dead'.format(self.pid, self.ct))
+            except Exception:
+                msg = 'Process [{}]-[{}] is Dead'.format(self.pid, self.ct)
+                logging.info(msg)
+                self.statusBar().showMessage(msg, 1000)
                 self.pid, self.ct = None, ''
                 self.mpl_ax.set_title(
                     'Memory Usage Monitor ({} Not Found)'.format(p_name),
                     color='w', fontdict={'fontsize': 10})
                 self.mpl_ax.figure.canvas.draw_idle()
-                print(repr(e))
 
         # try to get a new pid
         if self.pid is None:
@@ -209,7 +247,9 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
                         proc.create_time()).strftime('%Y-%m-%d %H:%M:%S')
                     self.mpl_ax.set_title('Memory Usage Monitor ({} - {})'.format(p_name, self.ct),
                                           color='w', fontdict={'fontsize': 10})
-                    logging.info('New process [{}]-[{}] found'.format(self.pid, self.ct))
+                    msg = 'New process [{}]-[{}] found'.format(self.pid, self.ct)
+                    logging.info(msg)
+                    self.statusBar().showMessage(msg, 1000)
                     break
 
     def onTimer(self):
