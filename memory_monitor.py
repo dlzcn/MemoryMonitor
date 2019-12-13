@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 8
-#   last modified: 2019-12-13 15:12:53
+#        revision: 9
+#   last modified: 2019-12-13 16:49:23
 # *****************************************************
 
 import os
@@ -26,8 +26,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-__version__ = '1.1.0'
-__revision__ = 8
+__version__ = '1.1.1'
+__revision__ = 9
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -233,6 +233,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
                 logging.info(msg)
                 self.statusBar().showMessage(msg, 1000)
                 self.pid, self.ct = None, ''
+                self.dq.clear()
                 self.mpl_ax.set_title(
                     'Memory Usage Monitor ({} Not Found)'.format(p_name),
                     color='w', fontdict={'fontsize': 10})
