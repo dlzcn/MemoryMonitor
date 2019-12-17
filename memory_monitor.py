@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 9
-#   last modified: 2019-12-13 16:49:23
+#        revision: 10
+#   last modified: 2019-12-17 10:51:05
 # *****************************************************
 
 import os
@@ -26,8 +26,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-__version__ = '1.1.1'
-__revision__ = 9
+__version__ = '1.1.2'
+__revision__ = 10
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -266,11 +266,11 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
             x = np.arange(0, len(self.dq))
 
             self.line_rss.set_xdata(x)
-            rss = np.array([x[1] / 1024 / 1204 for x in self.dq])
+            rss = np.array([x[1] / 1024 / 1024 for x in self.dq])
             self.line_rss.set_ydata(rss)
 
             self.line_vms.set_xdata(x)
-            vms = np.array([x[2] / 1024 / 1204 for x in self.dq])
+            vms = np.array([x[2] / 1024 / 1024 for x in self.dq])
             self.line_vms.set_ydata(vms)
 
             self.mpl_ax.set_ylim(0, max(np.max(vms), np.max(rss)) * 1.1)
