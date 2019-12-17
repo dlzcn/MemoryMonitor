@@ -4,12 +4,11 @@
 #           @file: parse_log.py
 #          @brief: Parser memory monitor log
 #       @internal: 
-#        revision: 1
-#   last modified: 2019-12-16 09:52:11
+#        revision: 2
+#   last modified: 2019-12-17 13:42:53
 # *****************************************************
 
 import re
-import sys
 import pandas as pd
 
 
@@ -40,17 +39,55 @@ def parse_memory_log(f, exe_name=None) -> pd.DataFrame:
 
 
 if __name__ == '__main__':
+    import argparse
     import numpy as np
     import matplotlib.pyplot as plt
-    d = parse_memory_log(sys.argv[1])
-    if len(sys.argv) > 2:
-        num = int(sys.argv[2])
-    else:
-        num = 10
+    from utils.ema import exponential_moving_average
+    # parse opt
+    argtable = argparse.ArgumentParser(
+        description='Memory Monitor log viewer')
+    argtable.add_argument('-f', '--log', dest='log',
+                          help='the memory monitor log',
+                          default='')
+    argtable.add_argument('--ignore', dest='ignore',
+                          action='store_true',
+                          help='Set to ignore data with points less than given count',
+                          default=False)
+    argtable.add_argument('--ignore_n', dest='ignore_n',
+                          help='Minimal data point for analysis',
+                          type=int, default=100)
+    argtable.add_argument('--interval', dest='interval',
+                          help='Sampling time interval in seconds',
+                          type=int, default=10)
+    argtable.add_argument('--ema', dest='ema',
+                          action='store_true',
+                          help='Set to use Exponential Moving Average to smooth data',
+                          default=False)
+    argtable.add_argument('--ema_n', dest='ema_n',
+                          help='N of the EMA function',
+                          type=int, default=10)
+
+    opt = argtable.parse_args()
+
+    d = parse_memory_log(opt.log)
 
     fig, ax = plt.subplots(figsize=(10, 4))
     for key, grp in d.groupby(['Process']):
-        ax.plot(np.arange(len(grp['rss']) * num / 60), grp['rss'], label=key)
+        dat_len = len(grp['rss'])
+        if opt.ignore and dat_len < opt.ignore_n:
+            continue
+        if opt.ema:
+            ax.plot(
+                np.arange(dat_len) * opt.interval / 60,
+                exponential_moving_average(grp['rss'], opt.ema_n),
+                label=key
+            )
+        else:
+            ax.plot(
+                np.arange(dat_len) * opt.interval / 60,
+                grp['rss'],
+                label=key
+            )
 
     ax.legend()
     plt.show()
