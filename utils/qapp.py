@@ -88,6 +88,26 @@ def ndarrayToQImage(img):
     return qimage
 
 
+def checkQLineEditValidatorState(editor: QtWidgets.QLineEdit, color: QtGui.QColor):
+    """ Update QLineEdit background color according to state of its Validator
+    :param editor
+        The QLineEdit widget object
+    :param color
+        The default background color
+    """
+    validator = editor.validator()
+    if validator is None:
+        return
+    state = validator.validate(editor.text(), 0)[0]
+    if state == QtGui.QValidator.Acceptable:
+        bk_color = color
+    elif state == QtGui.QValidator.Intermediate:
+        bk_color = QtGui.QColor(255, 127, 14)
+    else:
+        bk_color = QtGui.QColor(214, 39, 40)
+    editor.setStyleSheet('QLineEdit { background-color: %s }' % bk_color.name())
+
+
 class Receiver(QtCore.QObject):
     """ A QObject (to be run in a QThread) which sits waiting for data to come through a Queue.Queue().
     It blocks until data is available, and one it has got something from the queue, it sends
