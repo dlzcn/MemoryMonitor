@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 12
-#   last modified: 2020-01-07 17:34:50
+#        revision: 13
+#   last modified: 2020-01-08 13:45:17
 # *****************************************************
 
 import os
@@ -29,8 +29,8 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 from parse_log import parse_memory_log
 
-__version__ = '1.2.1'
-__revision__ = 12
+__version__ = '1.2.2'
+__revision__ = 13
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -139,7 +139,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         self.setMinimumSize(800, 600)
         self.setWindowTitle("{0} ({1}.{2})".format(
             __app_tittle__, __version__, __revision__))
-        self.setWindowIcon(loadQIcon('icons/app_icon.png'))
+        # self.setWindowIcon(loadQIcon('icons/app_icon.png'))
         # The main widget
         widget = QtWidgets.QWidget()
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
@@ -476,6 +476,13 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         self._log_parse_runnable.ev.connect(self._on_assist_worker_thread_event)
         self._log_parse_runnable.queue.emit()
 
+    def center(self):
+        frame_gm = self.frameGeometry()
+        screen = QtWidgets.QApplication.desktop().screenNumber(QtWidgets.QApplication.desktop().cursor().pos())
+        center_pt = QtWidgets.QApplication.desktop().screenGeometry(screen).center()
+        frame_gm.moveCenter(center_pt)
+        self.move(frame_gm.topLeft())
+
 
 if __name__ == "__main__":
     # enable logging
@@ -500,13 +507,23 @@ if __name__ == "__main__":
     setHighDPI()
     # create Qt Application
     app = QtWidgets.QApplication(sys.argv)
-    # set dark style
-    setDarkStyle(app)
+    app.setWindowIcon(loadQIcon('icons/app_icon.png'))
+    try:
+        import qtmodern.styles
+        qtmodern.styles.dark(app)
+    except ModuleNotFoundError:
+        setDarkStyle(app)
     # update default font for Windows 10
     if sys.platform == "win32":
         font = QtGui.QFont("Segoe UI", 9)
         app.setFont(font)
     # create the MainForm
     form = MemoryUsageMonitor()
-    form.show()
+    form.center()
+    try:
+        import qtmodern.windows
+        mw = qtmodern.windows.ModernWindow(form)
+        mw.show()
+    except ModuleNotFoundError:
+        form.show()
     sys.exit(app.exec_())
