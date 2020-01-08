@@ -4,11 +4,12 @@
 #           @file: parse_log.py
 #          @brief: Parser memory monitor log
 #       @internal: 
-#        revision: 2
-#   last modified: 2019-12-17 13:42:53
+#        revision: 3
+#   last modified: 2020-01-08 10:04:22
 # *****************************************************
 
 import re
+import logging
 import pandas as pd
 
 
@@ -19,10 +20,12 @@ def parse_memory_log(f, exe_name=None) -> pd.DataFrame:
     else:
         pattern = r'.* \[(.*)\]-\[{}]-\[(.*)\] - \[(.*)\]'.format(exe_name)
 
+    compile_regex = re.compile(pattern, re.IGNORECASE)
     rst = []
     with open(f, 'r') as b:
         for line in b.readlines():
-            g = re.search(pattern, line)
+            # g = re.search(pattern, line)
+            g = compile_regex.search(line)
             if g:
                 groups = g.groups()
                 if exe_name is None:
@@ -32,7 +35,7 @@ def parse_memory_log(f, exe_name=None) -> pd.DataFrame:
                     data = [full_name, ] + [int(x) for x in groups[-1].split(',')]
                     rst.append(tuple(data))
                 except Exception as e:
-                    print(repr(e))
+                    logging.error(repr(e), exc_info=True)
 
     df = pd.DataFrame(rst, columns=['Process', 'rss', 'vms'])
     return df
