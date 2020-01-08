@@ -6,7 +6,7 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 11
+#        revision: 12
 #   last modified: 2020-01-07 17:34:50
 # *****************************************************
 
@@ -29,8 +29,8 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 from parse_log import parse_memory_log
 
-__version__ = '1.2.0'
-__revision__ = 11
+__version__ = '1.2.1'
+__revision__ = 12
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -182,6 +182,8 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
             self.line_vms = self._mpl_ax.plot(
                 x, np.sin(random.random() * np.pi + x), '--', label='VM Size')[0]
             self._mpl_ax.legend()
+        else:
+            self._mpl_ax.grid(True)
 
     def _setup_mpl_widget(self):
         canvas = FigureCanvas(Figure(figsize=(5, 3)))
@@ -441,13 +443,16 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         interval = self._settings.value('interval', 10, type=int)
         length_lim = self._settings.value('length_limit', 100, type=int)
         convert_to_hours = 60 * 60 / interval
+        not_empty_plot = False
         for key, grp in g:
             if key not in items or len(grp['rss']) < length_lim:
-                logging.debug('{} dropped, not selected or not enough length'.format(key))
+                logging.warning('{} dropped, not selected or not enough length'.format(key))
             else:
+                not_empty_plot = True
                 self._mpl_ax.plot(np.arange(len(grp['rss'])) / convert_to_hours, grp['rss'] / 1024 / 1024, label=key)
             self._progress.setValue(self._progress.value() + 1)
-        self._mpl_ax.legend()
+        if not_empty_plot:
+            self._mpl_ax.legend()
         self._mpl_ax.figure.canvas.draw()
         self._progress.reset()
 
@@ -474,12 +479,24 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     # enable logging
-    logging.basicConfig(
-        filename='memory_monitor.log',
-        level=logging.INFO,
-        format='%(asctime)s %(levelname)-8s %(message)s',
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        fmt='%(asctime)s %(levelname)-8s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    # file output to record memory usage
+    fh = logging.FileHandler('memory.log')
+    fh.setFormatter(formatter)
+    fh.setLevel(logging.INFO)
+    # we also need stream output for debugging
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    ch.setLevel(logging.WARNING)
+    # add the handlers to logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    # logging end
     setHighDPI()
     # create Qt Application
     app = QtWidgets.QApplication(sys.argv)
