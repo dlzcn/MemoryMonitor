@@ -6,8 +6,8 @@
 #           @file: memory_monitor.py
 #          @brief: A tool to monitor memory usage of given process
 #       @internal: 
-#        revision: 13
-#   last modified: 2020-01-08 13:45:17
+#        revision: 14
+#   last modified: 2020-03-06 12:24:48
 # *****************************************************
 
 import os
@@ -29,8 +29,8 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 from parse_log import parse_memory_log
 
-__version__ = '1.2.2'
-__revision__ = 13
+__version__ = '1.2.3'
+__revision__ = 14
 __app_tittle__ = 'MemoryUsageMonitor'
 
 
@@ -117,7 +117,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         super().__init__(parent)
         self._settings = QtCore.QSettings(QtCore.QSettings.NativeFormat,
                                           QtCore.QSettings.UserScope,
-                                         'HF_AIO', 'MemoryUsageMonitor')
+                                          'HF_AIO', 'MemoryUsageMonitor')
         self._pid = None
         self._ct = ''
         self._dq = collections.deque(maxlen=self._settings.value('dq_maxlen', 120, type=int))
@@ -167,7 +167,6 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
         # white text, ticks
         self._mpl_ax.set_title('Memory Usage Monitor',
                                color='w', fontdict={'fontsize': 10})
-        # self.mpl_ax.set_xlabel('Sampling points', color='w')
         self._mpl_ax.set_ylabel('Usage (MB)', color='w')
         self._mpl_ax.tick_params(axis='both', color='w')
         self._mpl_ax.tick_params(colors='w', labelsize=8)
@@ -182,8 +181,10 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
             self.line_vms = self._mpl_ax.plot(
                 x, np.sin(random.random() * np.pi + x), '--', label='VM Size')[0]
             self._mpl_ax.legend()
+            self._mpl_ax.set_xlabel('Date', color='w')
         else:
             self._mpl_ax.grid(True)
+            self._mpl_ax.set_xlabel('Elapsed Hours', color='w')
 
     def _setup_mpl_widget(self):
         canvas = FigureCanvas(Figure(figsize=(5, 3)))
@@ -315,7 +316,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
             self._settings.setValue(w.objectName(), w.text())
         elif isinstance(w, QtWidgets.QComboBox):
             self._settings.setValue(w.objectName(),
-                                   '{}'.format(w.currentIndex()))
+                                    '{}'.format(w.currentIndex()))
 
     def _check_validator_state(self):
         checkQLineEditValidatorState(self.sender(), self.palette().color(QtGui.QPalette.Base))
@@ -463,7 +464,7 @@ class MemoryUsageMonitor(QtWidgets.QMainWindow):
             filter='Memory Log (*.log)')
         if not log_path:
             return
-        self._settings.setValue('prev_log_dir',  os.path.dirname(log_path))
+        self._settings.setValue('prev_log_dir', os.path.dirname(log_path))
         # firstly stop monitor
         self._on_stop()
         p_name = self._settings.value('process_name', '', type=str)
@@ -510,6 +511,7 @@ if __name__ == "__main__":
     app.setWindowIcon(loadQIcon('icons/app_icon.png'))
     try:
         import qtmodern.styles
+
         qtmodern.styles.dark(app)
     except ModuleNotFoundError:
         setDarkStyle(app)
@@ -522,6 +524,7 @@ if __name__ == "__main__":
     form.center()
     try:
         import qtmodern.windows
+
         mw = qtmodern.windows.ModernWindow(form)
         mw.show()
     except ModuleNotFoundError:
